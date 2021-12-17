@@ -72,7 +72,7 @@ pub struct FrameAccessor<'a, T> {
 
 impl<'a, T> FrameAccessor<'a, T> {
     pub unsafe fn new_unchecked(data: &'a mut [T], width: usize, height: usize) -> Self {
-        // SAFETY: width * height == data.len()
+        // SAFETY: width * height <= data.len()
         Self {
             data,
             width,
@@ -80,10 +80,24 @@ impl<'a, T> FrameAccessor<'a, T> {
             stride: width,
         }
     }
+    pub unsafe fn new_unchecked_strided(
+        data: &'a mut [T],
+        width: usize,
+        height: usize,
+        stride: usize,
+    ) -> Self {
+        // SAFETY: stride * height <= data.len() && stride >= width
+        Self {
+            data,
+            width,
+            height,
+            stride,
+        }
+    }
 
     pub fn new(data: &'a mut [T], width: usize, height: usize) -> Self {
-        if data.len() != width * height {
-            panic!("invalid size of slice passed to fixed frame")
+        if data.len() < width * height {
+            panic!("slice passed to FrameAccessor::new is too small")
         }
         // SAFETY: check just above
         unsafe { FrameAccessor::new_unchecked(data, width, height) }
@@ -135,8 +149,13 @@ pub struct FixedFrameAccessor<'a, T, const W: usize, const H: usize> {
 
 impl<'a, T, const W: usize, const H: usize> FixedFrameAccessor<'a, T, W, H> {
     pub unsafe fn new_unchecked(data: &'a mut [T]) -> Self {
-        // SAFETY: L == W * H (can't use const generic params in const expressions, so no way to check this shit at compile-time)
+        // SAFETY: W * H <= data.len() (can't use const generic params in const expressions, so no way to check this shit at compile-time)
         Self { data, stride: W }
+    }
+
+    pub unsafe fn new_unchecked_strided(data: &'a mut [T], stride: usize) -> Self {
+        // SAFETY: stride * H <= data.len() && stride >= W
+        Self { data, stride }
     }
 
     pub fn new(data: &'a mut [T]) -> Self {
@@ -144,6 +163,35 @@ impl<'a, T, const W: usize, const H: usize> FixedFrameAccessor<'a, T, W, H> {
             panic!("invalid size of slice passed to fixed frame")
         }
         unsafe { FixedFrameAccessor::new_unchecked(data) }
+    }
+
+    pub fn subframe<'b, const X: usize, const Y: usize, const SUB_W: usize, const SUB_H: usize>(
+        &'b mut self,
+    ) -> FixedFrameAccessor<'b, T, SUB_W, SUB_H> {
+        // I hate that we can't have constexpr expressions for constant parameters
+        // God bless rust
+        if X + SUB_W > W || Y + SUB_H > H {
+            panic!("subframing out of bounds");
+        }
+        // SAFETY: check above
+        unsafe { self.subframe_unchecked::<X, Y, SUB_W, SUB_H>() }
+    }
+
+    // SAFETY: X + SUB_W <= W && Y + SUB_H <= H
+    pub unsafe fn subframe_unchecked<
+        'b,
+        const X: usize,
+        const Y: usize,
+        const SUB_W: usize,
+        const SUB_H: usize,
+    >(
+        &'b mut self,
+    ) -> FixedFrameAccessor<'b, T, SUB_W, SUB_H> {
+        // SAFETY: i hope it's safe
+        FixedFrameAccessor::new_unchecked_strided(
+            &mut self.data[X + Y * self.stride..],
+            self.stride,
+        )
     }
 }
 
@@ -197,6 +245,6 @@ impl<'a, 'b, T, const W: usize, const H: usize> From<&'b mut FixedFrameAccessor<
 {
     fn from(f: &'b mut FixedFrameAccessor<'a, T, W, H>) -> Self {
         // SAFETY: bounds should have been already checked for FixedFrameAccessor
-        unsafe { Self::new_unchecked(f.data, W, H) }
+        unsafe { Self::new_unchecked_strided(f.data, W, H, f.stride) }
     }
 }

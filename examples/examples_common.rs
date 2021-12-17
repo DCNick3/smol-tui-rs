@@ -7,6 +7,7 @@ use std::{
 use smol_tui_rs::{FixedFrameAccessor, FrameAccessor, FrameAccessorTrait};
 use termion::screen::AlternateScreen;
 
+#[allow(unused)]
 pub fn with_alternate_screen<F>(f: F)
 where
     F: FnOnce(&mut AlternateScreen<Stdout>) -> (),
@@ -69,5 +70,6 @@ where
 }
 
 pub type FixedAccessor<'a> = FixedFrameAccessor<'a, u8, 20, 4>;
+#[allow(unused)]
 pub type Accessor<'a> = FrameAccessor<'a, u8>;
 pub type Frame = [u8; 20 * 4];
