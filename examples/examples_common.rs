@@ -4,7 +4,7 @@ use std::{
     io::{stdout, Stdout},
 };
 
-use smol_tui_rs::FrameAccessorTrait;
+use smol_tui_rs::{FrameAccessorTrait, FixedFrameAccessor, FrameAccessor};
 use termion::screen::AlternateScreen;
 
 pub fn with_alternate_screen<F>(f: F)
@@ -33,13 +33,13 @@ where
                 f.write_char('-')?;
             }
             f.write_char('+')?;
-            f.write_char('\n')?;
             Ok(())
         }
 
         let frame = &self.0;
 
         write_border_row(f, frame.width())?;
+        f.write_char('\n')?;
 
         for y in 0..frame.height() {
             f.write_char('|')?;
@@ -67,3 +67,8 @@ where
 {
     DisplayableFrameAccessor { 0: frame }
 }
+
+
+pub type FixedAccessor<'a> = FixedFrameAccessor<'a, u8, 20, 4>;
+pub type Accessor<'a> = FrameAccessor<'a, u8>;
+pub type Frame = [u8; 20 * 4];

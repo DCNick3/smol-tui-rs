@@ -46,6 +46,19 @@ pub unsafe trait FrameAccessorTrait {
         self.get_mut(index.0, index.1)
             .unwrap_or_else(|| panic!("frame access out of bounds"))
     }
+
+    fn fill<F>(&mut self, filler: F)
+    where
+        F: Into<Self::Element> + Copy
+    {
+        for y in 0..self.height() {
+            for x in 0..self.width() {
+                // SAFETY: x & y are in bounds by construction
+                let p = unsafe { self.get_unchecked_mut(x, y)};
+                *p = filler.into();
+            }
+        }
+    }
 }
 
 pub struct FixedFrameAccessor<'a, T, const W: usize, const H: usize> {
