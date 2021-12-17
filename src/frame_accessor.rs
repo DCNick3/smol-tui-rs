@@ -12,6 +12,8 @@ pub unsafe trait FrameAccessorTrait {
         self.size().1
     }
 
+    fn data(&mut self) -> &[Self::Element];
+
     // SAFETY: x < width() && y < height()
     unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Element;
     // SAFETY: x < width() && y < height()
@@ -82,6 +84,10 @@ unsafe impl<'a, T, const W: usize, const H: usize> FrameAccessorTrait
     unsafe fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut Self::Element {
         self.data.get_unchecked_mut(x + y * self.stride)
     }
+
+    fn data(&mut self) -> &[Self::Element] {
+        self.data
+    }
 }
 
 impl<'a, T, const W: usize, const H: usize> Index<(usize, usize)>
@@ -110,16 +116,22 @@ pub struct FrameAccessor<'a, T> {
 }
 
 impl<'a, T> FrameAccessor<'a, T> {
-    pub fn new(data: &'a mut [T], width: usize, height: usize) -> Self {
-        if data.len() != width * height {
-            panic!("invalid size of slice passed to fixed frame")
-        }
-        FrameAccessor {
+    pub unsafe fn new_unchecked(data: &'a mut [T], width: usize, height: usize) -> Self {
+        // SAFETY: width * height == data.len()
+        Self {
             data,
             width,
             height,
             stride: width,
         }
+    }
+
+    pub fn new(data: &'a mut [T], width: usize, height: usize) -> Self {
+        if data.len() != width * height {
+            panic!("invalid size of slice passed to fixed frame")
+        }
+        // SAFETY: check just above
+        unsafe { FrameAccessor::new_unchecked(data, width, height) }
     }
 }
 
@@ -138,6 +150,9 @@ unsafe impl<'a, T> FrameAccessorTrait for FrameAccessor<'a, T> {
     unsafe fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut Self::Element {
         self.data.get_unchecked_mut(x + y * self.stride)
     }
+    fn data(&mut self) -> &[Self::Element] {
+        self.data
+    }
 }
 
 impl<'a, T> Index<(usize, usize)> for FrameAccessor<'a, T> {
@@ -151,5 +166,16 @@ impl<'a, T> Index<(usize, usize)> for FrameAccessor<'a, T> {
 impl<'a, T> IndexMut<(usize, usize)> for FrameAccessor<'a, T> {
     fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
         FrameAccessorTrait::index_mut(self, index)
+    }
+}
+
+impl<'a, T, const W: usize, const H: usize> From<FixedFrameAccessor<'a, T, W, H>>
+    for FrameAccessor<'a, T>
+{
+    fn from(f: FixedFrameAccessor<'a, T, W, H>) -> Self {
+        // SAFETY: bounds should have been already checked for FixedFrameAccessor
+        unsafe {
+            Self::new_unchecked(f.data, W, H)
+        }
     }
 }
