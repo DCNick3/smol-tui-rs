@@ -16,12 +16,13 @@ fn main() {
     println!("{}", display_frame(&accessor));
 
     let mut accessor = FixedAccessor::new(&mut frame);
+    let accessor = &mut accessor;
 
     let filler = widgets::Filler::new('Y' as u8);
-    accessor.with_erased_size(|accessor| filler.render(accessor));
+    
+    filler.render(&mut (accessor).into());
 
-    //filler.render(&mut accessor);
     accessor[(4, 3)] = 'x' as u8;
 
-    println!("{}", display_frame(&accessor));
+    println!("{}", display_frame(accessor));
 }

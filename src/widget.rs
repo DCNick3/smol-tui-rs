@@ -20,6 +20,6 @@ where
     WType: Widget<T>,
 {
     fn render(&self, frame: &mut FixedFrameAccessor<T, W, H>) {
-        frame.with_erased_size(|frame| self.0.render(frame))
+        self.0.render(&mut frame.into())
     }
 }

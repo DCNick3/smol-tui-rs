@@ -12,7 +12,8 @@ pub unsafe trait FrameAccessorTrait {
         self.size().1
     }
 
-    fn data(&mut self) -> &[Self::Element];
+    fn data(&self) -> &[Self::Element];
+    fn data_mut(&mut self) -> &mut [Self::Element];
 
     // SAFETY: x < width() && y < height()
     unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Element;
@@ -104,7 +105,10 @@ unsafe impl<'a, T> FrameAccessorTrait for FrameAccessor<'a, T> {
     unsafe fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut Self::Element {
         self.data.get_unchecked_mut(x + y * self.stride)
     }
-    fn data(&mut self) -> &[Self::Element] {
+    fn data(&self) -> &[Self::Element] {
+        self.data
+    }
+    fn data_mut(&mut self) -> &mut [Self::Element] {
         self.data
     }
 }
@@ -141,24 +145,6 @@ impl<'a, T, const W: usize, const H: usize> FixedFrameAccessor<'a, T, W, H> {
         }
         unsafe { FixedFrameAccessor::new_unchecked(data) }
     }
-
-    /// Convert the accessor to the one with erased size & lend it to the lambda
-    /// This is required because of mutable reference aliasing rules:
-    ///     we can't have a fixed & an erased accessor living at the same time
-    /// That's why this exists: it ensures you don't use the fixed accessor while
-    ///     having an erased one
-    pub fn with_erased_size<F, R>(&mut self, f: F) -> R
-    where
-        F: FnOnce(&mut FrameAccessor<T>) -> R,
-    {
-        // SAFETY: bounds should have been already checked for FixedFrameAccessor
-        let mut erased = unsafe {
-            // a reborrow occurs here and allows this to work
-            // Not much docs are there though: https://github.com/rust-lang/reference/issues/788
-            FrameAccessor::new_unchecked(self.data, W, H)
-        };
-        f(&mut erased)
-    }
 }
 
 // SAFETY: width & height return constant generic parameters
@@ -179,7 +165,10 @@ unsafe impl<'a, T, const W: usize, const H: usize> FrameAccessorTrait
         self.data.get_unchecked_mut(x + y * self.stride)
     }
 
-    fn data(&mut self) -> &[Self::Element] {
+    fn data(&self) -> &[Self::Element] {
+        self.data
+    }
+    fn data_mut(&mut self) -> &mut [Self::Element] {
         self.data
     }
 }
@@ -203,10 +192,10 @@ impl<'a, T, const W: usize, const H: usize> IndexMut<(usize, usize)>
 }
 
 // not really useful, as it moves out of accessor (no way to get the fixed accessor back)
-impl<'a, T, const W: usize, const H: usize> From<FixedFrameAccessor<'a, T, W, H>>
-    for FrameAccessor<'a, T>
+impl<'a, 'b, T, const W: usize, const H: usize> From<&'b mut FixedFrameAccessor<'a, T, W, H>>
+    for FrameAccessor<'b, T>
 {
-    fn from(f: FixedFrameAccessor<'a, T, W, H>) -> Self {
+    fn from(f: &'b mut FixedFrameAccessor<'a, T, W, H>) -> Self {
         // SAFETY: bounds should have been already checked for FixedFrameAccessor
         unsafe { Self::new_unchecked(f.data, W, H) }
     }
