@@ -49,78 +49,19 @@ pub unsafe trait FrameAccessorTrait {
 
     fn fill<F>(&mut self, filler: F)
     where
-        F: Into<Self::Element> + Copy
+        F: Into<Self::Element> + Copy,
     {
         for y in 0..self.height() {
             for x in 0..self.width() {
                 // SAFETY: x & y are in bounds by construction
-                let p = unsafe { self.get_unchecked_mut(x, y)};
+                let p = unsafe { self.get_unchecked_mut(x, y) };
                 *p = filler.into();
             }
         }
     }
 }
 
-pub struct FixedFrameAccessor<'a, T, const W: usize, const H: usize> {
-    data: &'a mut [T],
-    stride: usize, // TODO: this can probably be made smaller, but do we care enough to increase complexity?
-}
-
-impl<'a, T, const W: usize, const H: usize> FixedFrameAccessor<'a, T, W, H> {
-    pub unsafe fn new_unchecked(data: &'a mut [T]) -> Self {
-        // SAFETY: L == W * H (can't use const generic params in const expressions, so no way to check this shit at compile-time)
-        Self { data, stride: W }
-    }
-
-    pub fn new(data: &'a mut [T]) -> Self {
-        if data.len() != W * H {
-            panic!("invalid size of slice passed to fixed frame")
-        }
-        unsafe { FixedFrameAccessor::new_unchecked(data) }
-    }
-}
-
-// SAFETY: width & height return constant generic parameters
-unsafe impl<'a, T, const W: usize, const H: usize> FrameAccessorTrait
-    for FixedFrameAccessor<'a, T, W, H>
-{
-    type Element = T;
-
-    fn size(&self) -> (usize, usize) {
-        (W, H)
-    }
-
-    unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Element {
-        self.data.get_unchecked(x + y * self.stride)
-    }
-
-    unsafe fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut Self::Element {
-        self.data.get_unchecked_mut(x + y * self.stride)
-    }
-
-    fn data(&mut self) -> &[Self::Element] {
-        self.data
-    }
-}
-
-impl<'a, T, const W: usize, const H: usize> Index<(usize, usize)>
-    for FixedFrameAccessor<'a, T, W, H>
-{
-    type Output = T;
-
-    fn index(&self, index: (usize, usize)) -> &Self::Output {
-        FrameAccessorTrait::index(self, index)
-    }
-}
-
-impl<'a, T, const W: usize, const H: usize> IndexMut<(usize, usize)>
-    for FixedFrameAccessor<'a, T, W, H>
-{
-    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
-        FrameAccessorTrait::index_mut(self, index)
-    }
-}
-
+// A frame accessor with no information about frame size known at compile time (it's erased from it's type)
 pub struct FrameAccessor<'a, T> {
     data: &'a mut [T],
     width: usize,
@@ -182,13 +123,91 @@ impl<'a, T> IndexMut<(usize, usize)> for FrameAccessor<'a, T> {
     }
 }
 
+/// A frame accessor that has a size known at compile time
+pub struct FixedFrameAccessor<'a, T, const W: usize, const H: usize> {
+    data: &'a mut [T],
+    stride: usize, // TODO: this can probably be made smaller, but do we care enough to increase complexity?
+}
+
+impl<'a, T, const W: usize, const H: usize> FixedFrameAccessor<'a, T, W, H> {
+    pub unsafe fn new_unchecked(data: &'a mut [T]) -> Self {
+        // SAFETY: L == W * H (can't use const generic params in const expressions, so no way to check this shit at compile-time)
+        Self { data, stride: W }
+    }
+
+    pub fn new(data: &'a mut [T]) -> Self {
+        if data.len() != W * H {
+            panic!("invalid size of slice passed to fixed frame")
+        }
+        unsafe { FixedFrameAccessor::new_unchecked(data) }
+    }
+
+    /// Convert the accessor to the one with erased size & lend it to the lambda
+    /// This is required because of mutable reference aliasing rules:
+    ///     we can't have a fixed & an erased accessor living at the same time
+    /// That's why this exists: it ensures you don't use the fixed accessor while
+    ///     having an erased one
+    pub fn with_erased_size<F, R>(&mut self, f: F) -> R
+    where
+        F: FnOnce(&mut FrameAccessor<T>) -> R,
+    {
+        // SAFETY: bounds should have been already checked for FixedFrameAccessor
+        let mut erased = unsafe {
+            // a reborrow occurs here and allows this to work
+            // Not much docs are there though: https://github.com/rust-lang/reference/issues/788
+            FrameAccessor::new_unchecked(self.data, W, H)
+        };
+        f(&mut erased)
+    }
+}
+
+// SAFETY: width & height return constant generic parameters
+unsafe impl<'a, T, const W: usize, const H: usize> FrameAccessorTrait
+    for FixedFrameAccessor<'a, T, W, H>
+{
+    type Element = T;
+
+    fn size(&self) -> (usize, usize) {
+        (W, H)
+    }
+
+    unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Element {
+        self.data.get_unchecked(x + y * self.stride)
+    }
+
+    unsafe fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut Self::Element {
+        self.data.get_unchecked_mut(x + y * self.stride)
+    }
+
+    fn data(&mut self) -> &[Self::Element] {
+        self.data
+    }
+}
+
+impl<'a, T, const W: usize, const H: usize> Index<(usize, usize)>
+    for FixedFrameAccessor<'a, T, W, H>
+{
+    type Output = T;
+
+    fn index(&self, index: (usize, usize)) -> &Self::Output {
+        FrameAccessorTrait::index(self, index)
+    }
+}
+
+impl<'a, T, const W: usize, const H: usize> IndexMut<(usize, usize)>
+    for FixedFrameAccessor<'a, T, W, H>
+{
+    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
+        FrameAccessorTrait::index_mut(self, index)
+    }
+}
+
+// not really useful, as it moves out of accessor (no way to get the fixed accessor back)
 impl<'a, T, const W: usize, const H: usize> From<FixedFrameAccessor<'a, T, W, H>>
     for FrameAccessor<'a, T>
 {
     fn from(f: FixedFrameAccessor<'a, T, W, H>) -> Self {
         // SAFETY: bounds should have been already checked for FixedFrameAccessor
-        unsafe {
-            Self::new_unchecked(f.data, W, H)
-        }
+        unsafe { Self::new_unchecked(f.data, W, H) }
     }
 }

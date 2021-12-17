@@ -11,9 +11,9 @@ fn main() {
     let mut accessor = FixedAccessor::new(&mut frame);
 
     accessor[(4, 3)] = 'y' as u8;
-    
+
     println!("{}", display_frame(&accessor));
 
     // this should panic
-    //accessor[(20, 0)] = '1' as u8; 
+    //accessor[(20, 0)] = '1' as u8;
 }
