@@ -3,17 +3,7 @@ name = "smol-tui"
 version = "0.1.0"
 edition = "2021"
 
-[profile.release]
-panic = 'abort'
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 smol-tui-derive = { path = 'smol-tui-derive' }
-
-[dev-dependencies]
-termion = "1.5.6"
-
-[[example]]
-name = "examples_common"
-crate-type = ["lib"]

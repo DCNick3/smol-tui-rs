@@ -1,3 +1,4 @@
+#[path = "../examples_common.rs"]
 mod examples_common;
 
 use examples_common::*;
@@ -30,7 +31,7 @@ fn main() {
 
     let mut accessor = FixedAccessor::new(&mut frame);
 
-    scene.render(&mut accessor);
+    scene.render(&mut accessor, 0);
 
     println!("{}", display_frame(&accessor));
 }

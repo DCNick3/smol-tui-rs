@@ -1,3 +1,4 @@
+#[path = "../examples_common.rs"]
 mod examples_common;
 
 use examples_common::*;

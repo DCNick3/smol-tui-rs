@@ -84,13 +84,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b9875c23cf305cd1fd7eb77234cbb705f21ea6a72c637a5c6db5fe4b8e7f008"
 
 [[package]]
-name = "smol-tui"
-version = "0.1.0"
-dependencies = [
- "smol-tui-derive",
-]
-
-[[package]]
 name = "smol-tui-derive"
 version = "0.1.0"
 dependencies = [
