@@ -69,7 +69,9 @@ where
     DisplayableFrameAccessor { 0: frame }
 }
 
+#[allow(unused)]
 pub type FixedAccessor<'a> = FixedFrameAccessor<'a, u8, 20, 4>;
 #[allow(unused)]
 pub type Accessor<'a> = FrameAccessor<'a, u8>;
+#[allow(unused)]
 pub type Frame = [u8; 20 * 4];

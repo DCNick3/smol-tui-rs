@@ -39,14 +39,26 @@ where
     phantom: PhantomData<T>
 }
 
+impl<T> Spinner<T>
+    where
+        T: Copy,
+        T: From<char>,
+{
+    pub fn new() -> Self {
+        Self {
+            phantom: PhantomData {}
+        }
+    }
+}
+
 impl<T> FixedWidget<T, 1, 1> for Spinner<T>
     where
         T: Copy,
         T: From<char>,
 {
     fn render_fixed(&self, frame: &mut FixedFrameAccessor<T, 1, 1>, tick: u32) {
-        static FRAMES: &'static [char] = &['.', 'o', 'O', 'o', '.'];
-        let val = FRAMES[tick as usize % FRAMES.len()];
+        static FRAMES: &'static [char] = &['.', 'o', 'O', 'o', '.']; // TODO this is not the best way to handle it... I guess
+        let val = FRAMES[(tick / 4) as usize % FRAMES.len()];
 
         frame.fill(val)
     }
