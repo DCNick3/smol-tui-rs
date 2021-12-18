@@ -4,7 +4,7 @@ use std::{
     io::{stdout, Stdout},
 };
 
-use smol_tui_rs::{FixedFrameAccessor, FrameAccessor, FrameAccessorTrait};
+use smol_tui::{FixedFrameAccessor, FrameAccessor, FrameAccessorTrait};
 use termion::screen::AlternateScreen;
 
 #[allow(unused)]

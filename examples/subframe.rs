@@ -2,7 +2,7 @@ mod examples_common;
 
 use examples_common::*;
 
-use smol_tui_rs::FrameAccessorTrait;
+use smol_tui::FrameAccessorTrait;
 
 fn main() {
     let mut frame: Frame = [' ' as u8; 20 * 4];

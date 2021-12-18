@@ -1,5 +1,3 @@
-use core::marker::PhantomData;
-
 use crate::{FixedFrameAccessor, FrameAccessor};
 
 pub trait Widget<T> {
@@ -10,16 +8,12 @@ pub trait FixedWidget<T, const W: usize, const H: usize> {
     fn render(&self, frame: &mut FixedFrameAccessor<T, W, H>);
 }
 
-pub struct FixedWidgetAdapter<T, WType, const W: usize, const H: usize>(WType, PhantomData<T>)
+// adapter to use erased widget with a fixed frame
+impl<T, WIDGET, const W: usize, const H: usize> FixedWidget<T, W, H> for WIDGET
 where
-    WType: Widget<T>;
-
-impl<T, WType, const W: usize, const H: usize> FixedWidget<T, W, H>
-    for FixedWidgetAdapter<T, WType, W, H>
-where
-    WType: Widget<T>,
+    WIDGET: Widget<T>,
 {
     fn render(&self, frame: &mut FixedFrameAccessor<T, W, H>) {
-        self.0.render(&mut frame.into())
+        self.render(&mut frame.into())
     }
 }

@@ -2,7 +2,7 @@ mod examples_common;
 
 use examples_common::*;
 
-use smol_tui_rs::{widgets, Widget};
+use smol_tui::{widgets, Widget};
 
 fn main() {
     let mut frame: Frame = [' ' as u8; 20 * 4];
@@ -19,7 +19,7 @@ fn main() {
     let accessor = &mut accessor;
 
     let filler = widgets::Filler::new('Y' as u8);
-    
+
     filler.render(&mut (accessor).into());
 
     accessor[(4, 3)] = 'x' as u8;
