@@ -1,155 +1,119 @@
 use proc_macro::TokenStream;
-use std::ops::Deref;
 use quote::{quote};
-use syn;
-use syn::{parse_macro_input, DeriveInput, Ident, Type};
-use darling;
-use darling::{ast, FromDeriveInput, FromField, util};
-use syn::spanned::Spanned;
-use ast::Data;
-use util::SpannedValue;
+use syn::{self, Attribute, AttributeArgs, parse_quote, Expr};
+use syn::{parse_macro_input, Ident, Type};
+use darling::{self, FromMeta, FromAttributes};
 use crate::common::crate_name;
 
-#[derive(Debug, Clone)]
-struct Widget {
-    ident: Ident,
-    #[allow(dead_code)]
-    ty: Type,
-
-    x: usize,
-    y: usize,
-    w: usize,
-    h: usize,
-    #[allow(dead_code)]
-    allow_intersection: bool,
-}
-
-#[derive(Debug, FromField)]
-#[darling(attributes(smol_tui), and_then="map_scene_field")]
-struct SceneField {
-    ident: Option<Ident>,
-    ty: Type,
-
+#[derive(Debug, FromAttributes)]
+#[darling(attributes(smol_tui), allow_unknown_fields)]
+struct SkipField
+{
     #[darling(default)]
     skip: bool,
 
     #[darling(default)]
-    x: darling::util::SpannedValue<Option<usize>>,
-    #[darling(default)]
-    y: Option<usize>,
-    #[darling(default)]
-    w: Option<usize>,
-    #[darling(default)]
-    h: Option<usize>,
-
-    #[darling(default)]
-    allow_intersection: bool,
-
-    // Man, this is ugly as heck
-    #[darling(skip)]
-    parsed: Option<util::SpannedValue<Widget>>
+    init: Option<String>, // rrr, we pass an expression as string. this kinda sucks
 }
 
-fn map_scene_field(mut f: SceneField) -> darling::Result<SceneField> {
-    if f.skip {
-        return Ok(f)
-    }
-    match (f.x.deref(), f.y, f.w, f.h) {
-        (Some(x), Some(y), Some(w), Some(h)) => {
-            f.parsed = Some(SpannedValue::new(Widget {
-                x: *x, y, w, h,
-                allow_intersection: f.allow_intersection,
+#[derive(Debug, FromAttributes)]
+#[darling(attributes(smol_tui))]
+struct WidgetAttrs {
+    x: usize,
+    y: usize,
+    w: usize,
+    h: usize,
 
-                ident: f.ident.clone().unwrap(),
-                ty: f.ty.clone()
-            }, f.ident.span()));
-            Ok(f)
-        },
-        _ => Err(darling::Error::
-            custom("Cannot parse widget: it must have x, y, w, h attribute params specified. If you don't want the field to be used as a widget, mark it as skip")
-            .with_span(&f.ident.span())) // TODO: can the error reporting be better?
-    }
-}
-
-#[derive(Debug, FromDeriveInput)]
-#[darling(attributes(smol_tui), supports(struct_named), and_then="map_scene_desc")]
-struct SceneDesc {
+    #[darling(default)]
     #[allow(dead_code)]
-    ident: Ident,
-    data: ast::Data<util::Ignored, SceneField>,
+    allow_intersection: bool,
+}
 
+
+#[derive(Debug, FromMeta)]
+struct SceneAttr {
     w: usize,
     h: usize,
     char_type: Ident,
-    // Man, this is ugly as heck
-    #[darling(skip)]
-    parsed: Option<Vec<util::SpannedValue<Widget>>>
 }
 
-fn map_scene_desc(mut desc: SceneDesc) -> darling::Result<SceneDesc> {
-    let mut widgets = vec![];
-
-    match desc.data {
-        Data::Struct(ref struc) => {
-            for f in struc.iter() {
-                if let Some(widget) = &f.parsed {
-                    widgets.push(widget.clone())
-                }
-            }
-        }
-        _ => return Err(darling::Error::custom("Only structs may be scenes"))
-    }
-    // TODO: validate intersections and stuff
-
-    desc.parsed = Some(widgets);
-
-    Ok(desc)
-}
-
-pub fn scene_derive_impl(input: TokenStream) -> TokenStream {
+pub fn smol_tui_impl(args: TokenStream, input: TokenStream) -> TokenStream {
     // Construct a representation of Rust code as a syntax tree
     // that we can manipulate
-    let input: DeriveInput = parse_macro_input!(input);
-
-    let name = &input.ident;
-
-    let inp: SceneDesc = match FromDeriveInput::from_derive_input(&input) {
+    let mut input: syn::ItemStruct = parse_macro_input!(input);
+    let args: AttributeArgs = parse_macro_input!(args);
+    let scene_attr = match SceneAttr::from_list(&args) {
         Ok(v) => v,
-        // TODO: how to combine darling with proc_macro_error?
         Err(e) => { return TokenStream::from(e.write_errors()); }
     };
 
-    let widgets = inp.parsed.unwrap();
-
     let crate_name = crate_name();
 
-    let widget_renders = widgets.into_iter().map(|widget| {
-        let id = &widget.ident;
-        // we may have used quote_spanned!, but it produces quite misleading errors (and hints!)
-        // maybe we are better if w/o span info
-        let x = widget.x;
-        let y = widget.y;
-        let w = widget.w;
-        let h = widget.h;
-        // scary, but does roughly the following:
-        // 1. subspan the frame (unsafely, as validation is all done during parsing)
-        // 2. convert the fixed frame to a size-erased one (if needed)
-        quote! {
-            #crate_name::FixedWidget::render_fixed(&self.#id,
-                &mut frame.subframe::<#x, #y, #w, #h>(), tick);
+    let mut inits = vec![];
+
+    for f in input.fields.iter_mut() {
+        let mut my_attrs: Vec<Attribute> = vec![];
+
+        let field = f.ident.clone().unwrap();
+
+        f.attrs.retain(|attr| {
+            if let Some(ident) = attr.path.get_ident() {
+                if ident.to_string() == "smol_tui" {
+                    my_attrs.push(attr.clone());
+
+                    return false
+                }
+            }
+            true
+        });
+        
+        let skip = SkipField::from_attributes(&my_attrs).unwrap();
+        if skip.skip {
+            let init = if let Some(ref init) = skip.init {
+                let init: Expr = syn::parse_str(init).unwrap();
+                quote! { #init }
+            } else {
+                quote! { Default::default() }
+            };
+            inits.push(quote! { #field : #init, });
+            continue;
         }
-    });
 
-    let t = inp.char_type;
-    let w = inp.w;
-    let h = inp.h;
+        let widget_attrs= match WidgetAttrs::from_attributes(&my_attrs) {
+            Ok(a) => a,
+            Err(e) => { return TokenStream::from(e.write_errors()); },// TODO: accumulate all the errors
+        };
 
-    let gen = quote! {
-        impl #crate_name::Scene<#t, #w, #h> for #name {
-            fn render(&self, frame: &mut #crate_name::FixedFrameAccessor<#t, #w, #h>, tick: u32) {
-                #(#widget_renders)*
+        let SceneAttr { w: scene_w, h: scene_h, ref char_type } = scene_attr;
+
+        let WidgetAttrs { x, y, w, h, .. } = widget_attrs;
+
+        let ty = &f.ty;
+        let new_ty: Type = parse_quote! {
+            #crate_name::widgets::Subframer::<#char_type, #ty, #scene_w, #scene_h, #x, #y, #w, #h>
+        };
+        f.ty = new_ty;
+
+        inits.push(quote! { #field : Default::default(), });
+
+        // TODO: check widget intersections
+    }
+
+    let name = &input.ident;
+
+    let init_impl = quote! {
+        impl ::core::default::Default for #name {
+            fn default() -> Self {
+                Self {
+                    #(#inits)*
+                }
             }
         }
+    };
+
+    let gen = quote! {
+        #input
+        #init_impl
     };
     gen.into()
 }

@@ -3,19 +3,18 @@ mod examples_common;
 
 use examples_common::*;
 
+use smol_tui::{smol_tui_scene, widgets, FixedFrameAccessor, FixedWidget, Scene};
 use std::io::Write;
-use smol_tui::widgets::{Filler, Spinner};
-use smol_tui::{widgets, Scene, FixedFrameAccessor};
 
 // Note: chars are not that effective in terms of memory
 // Used here just for the sake of spinner. Probably it should be moved to the examples...
-#[derive(Scene)]
-#[smol_tui(w = 20, h = 4, char_type = "char")]
+
+#[smol_tui_scene(w = 20, h = 4, char_type = "char")]
 struct TestScene {
     #[smol_tui(x = 0, y = 0, w = 20, h = 4)]
     bg: widgets::Filler<char>,
 
-    #[smol_tui(skip)]
+    #[smol_tui(skip, init = "42")] // init accepts a string that is later parsed as expression. May be suboptimal...
     #[allow(dead_code)]
     data_field: u32,
 
@@ -26,17 +25,25 @@ struct TestScene {
     spinner: widgets::Spinner<char>,
 }
 
+impl Scene<char, 20, 4> for TestScene {
+    fn render(&self, frame: &mut FixedFrameAccessor<char, 20, 4>, tick: u32) {
+        self.bg.render_fixed(&' ', frame, tick);
+        self.square.render_fixed(&'X', frame, tick);
+        self.spinner.render_fixed(&(), frame, tick);
+    }
+}
+
 fn main() {
-    let scene = TestScene {
-        bg: Filler::<char>::new(' '),
-        square: Filler::<char>::new('X'),
-        data_field: 2,
-        spinner: Spinner::<char>::new(),
-    };
+    let scene: TestScene = Default::default();
 
     let mut frame = [' '; 20 * 4];
 
     let mut accessor = FixedFrameAccessor::new(&mut frame);
+
+    println!(
+        "Fun fact: TestScene is {} bytes long",
+        std::mem::size_of::<TestScene>()
+    );
 
     with_alternate_screen(|s| {
         for i in 0..200 {

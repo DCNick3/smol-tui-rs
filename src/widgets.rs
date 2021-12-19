@@ -4,6 +4,7 @@ use smol_tui_derive::fixed_widget_adapter;
 
 use crate::{widget::Widget, FixedFrameAccessor, FixedWidget, FrameAccessor, FrameAccessorTrait};
 
+#[derive(Default)]
 pub struct Filler<T>
 where
     T: Copy,
@@ -35,6 +36,7 @@ where
     }
 }
 
+#[derive(Default)]
 pub struct Spinner<T>
 where
     T: Copy,
@@ -71,6 +73,7 @@ where
 }
 
 // OMG this is scary AF
+#[derive(Default)]
 pub struct Subframer<
     T,
     Inner,

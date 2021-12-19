@@ -7,5 +7,5 @@ pub mod widgets;
 
 pub use frame_accessor::*;
 pub use scene::*;
-pub use smol_tui_derive::Scene;
+pub use smol_tui_derive::*;
 pub use widget::*;

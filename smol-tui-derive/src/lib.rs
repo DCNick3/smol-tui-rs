@@ -4,9 +4,9 @@ mod common;
 mod scene;
 mod widget;
 
-#[proc_macro_derive(Scene, attributes(smol_tui))]
-pub fn scene_derive(input: TokenStream) -> TokenStream {
-    scene::scene_derive_impl(input)
+#[proc_macro_attribute]
+pub fn smol_tui_scene(args: TokenStream, input: TokenStream) -> TokenStream {
+    scene::smol_tui_impl(args, input)
 }
 
 #[proc_macro_attribute]
