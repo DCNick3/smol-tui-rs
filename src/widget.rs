@@ -1,11 +1,15 @@
 use crate::{FixedFrameAccessor, FrameAccessor};
 
 pub trait Widget<T> {
-    fn render(&self, frame: &mut FrameAccessor<T>, tick: u32);
+    type State;
+
+    fn render(&self, state: &Self::State, frame: &mut FrameAccessor<T>, tick: u32);
 }
 
 pub trait FixedWidget<T, const W: usize, const H: usize> {
-    fn render_fixed(&self, frame: &mut FixedFrameAccessor<T, W, H>, tick: u32);
+    type State;
+
+    fn render_fixed(&self, state: &Self::State, frame: &mut FixedFrameAccessor<T, W, H>, tick: u32);
 }
 
 // // adapter to allow rendering both fixed & size-erased widget with same API

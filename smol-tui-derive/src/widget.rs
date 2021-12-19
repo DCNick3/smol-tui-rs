@@ -45,8 +45,10 @@ pub fn fixed_widget_adapter_impl(input: TokenStream1) -> TokenStream1 {
             where
                 T: Copy
             {
-                fn render_fixed(&self, frame: &mut FixedFrameAccessor<T, W, H>, tick: u32) {
-                    #crate_name::Widget::render(self, &mut #crate_name::FrameAccessor::<T>::from(frame), tick)
+                type State = <#ty as #crate_name::Widget<T>>::State;
+
+                fn render_fixed(&self, state: &Self::State, frame: &mut FixedFrameAccessor<T, W, H>, tick: u32) {
+                    #crate_name::Widget::render(self, state, &mut #crate_name::FrameAccessor::<T>::from(frame), tick)
                 }
             }
         }
@@ -58,8 +60,10 @@ pub fn fixed_widget_adapter_impl(input: TokenStream1) -> TokenStream1 {
             where
                 T: Copy
             {
-                fn render_fixed(&self, frame: &mut FixedFrameAccessor<#element_type, W, H>, tick: u32) {
-                    #crate_name::Widget::render(self, &mut #crate_name::FrameAccessor::<#element_type>::from(frame), tick)
+                type State = <#ty as #crate_name::Widget<#element_type>>::State;
+
+                fn render_fixed(&self, state: &Self::State, frame: &mut FixedFrameAccessor<#element_type, W, H>, tick: u32) {
+                    #crate_name::Widget::render(self, state, &mut #crate_name::FrameAccessor::<#element_type>::from(frame), tick)
                 }
             }
         }
