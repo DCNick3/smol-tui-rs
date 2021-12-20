@@ -9,3 +9,5 @@ pub use frame_accessor::*;
 pub use scene::*;
 pub use smol_tui_derive::*;
 pub use widget::*;
+
+pub use enum_dispatch::*;

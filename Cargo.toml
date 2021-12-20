@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 smol-tui-derive = { path = 'smol-tui-derive' }
+enum_dispatch = "0.3.7"
