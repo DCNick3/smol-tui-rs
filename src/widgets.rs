@@ -1,9 +1,10 @@
-use core::marker::PhantomData;
+use core::{marker::PhantomData, cmp::max};
 
 use smol_tui_derive::fixed_widget_adapter;
 
 use crate::{widget::Widget, FixedFrameAccessor, FixedWidget, FrameAccessor, FrameAccessorTrait};
 
+// Fills all the provided frame with the same char passed through state
 #[derive(Default)]
 pub struct Filler<T>
 where
@@ -36,6 +37,7 @@ where
     }
 }
 
+// Shows a one-character spinner (TODO: maybe allow the symbols to be changed?)
 #[derive(Default)]
 pub struct Spinner<T>
 where
@@ -72,7 +74,87 @@ where
     }
 }
 
+// left-aligned label
+#[derive(Default)]
+pub struct LAlignedLabel<T>
+where
+    T: Copy,
+{
+    phantom: PhantomData<T>,
+}
+
+// center-aligned label
+#[derive(Default)]
+pub struct CAlignedLabel<T>
+where
+    T: Copy,
+{
+    phantom: PhantomData<T>,
+}
+
+// right-aligned label
+#[derive(Default)]
+pub struct RAlignedLabel<T>
+where
+    T: Copy,
+{
+    phantom: PhantomData<T>,
+}
+
+#[fixed_widget_adapter]
+impl<T> Widget<T> for LAlignedLabel<T>
+where
+    T: Copy,
+{
+    type State = [T];
+
+    fn render(&self, state: &[T], frame: &mut FrameAccessor<T>, _tick: u32) {
+        for (i, v) in (0..frame.width()).zip(state) {
+            frame[(i, 0)] = *v;
+        }
+    }
+}
+
+#[fixed_widget_adapter]
+impl<T> Widget<T> for CAlignedLabel<T>
+where
+    T: Copy,
+{
+    type State = [T];
+
+    fn render(&self, state: &[T], frame: &mut FrameAccessor<T>, _tick: u32) {
+        // need a bit of maths here though
+
+        // how many positions frame is wider that the rendered string?
+        let diff = frame.width() as isize - state.len() as isize;
+        // put half of that different before the text, the other will be placed after
+        // if the diff is negative - put it in the beginning
+        let offset = (max(0, diff) / 2) as usize;
+
+        for (i, v) in (offset..frame.width()).zip(state) {
+            frame[(i, 0)] = *v;
+        }
+    }
+}
+
+#[fixed_widget_adapter]
+impl<T> Widget<T> for RAlignedLabel<T>
+where
+    T: Copy,
+{
+    type State = [T];
+
+    fn render(&self, state: &[T], frame: &mut FrameAccessor<T>, _tick: u32) {
+        // magic, just iterate from the other direction =)
+        for (i, v) in (frame.width()..0).zip(state.iter().rev()) {
+            frame[(i, 0)] = *v;
+        }
+    }
+}
+
 // OMG this is scary AF
+// it is an adapter widget that subframes the frame when accessed
+// smol_tui_scene macro wraps all widgets in this to implement positioning
 #[derive(Default)]
 pub struct Subframer<
     T,
@@ -85,7 +167,6 @@ pub struct Subframer<
     const SUB_H: usize,
 > where
     T: Copy,
-    T: From<char>,
     Inner: FixedWidget<T, SUB_W, SUB_H>,
 {
     inner: Inner,
@@ -104,7 +185,6 @@ impl<
     > Subframer<T, Inner, W, H, X, Y, SUB_W, SUB_H>
 where
     T: Copy,
-    T: From<char>,
     Inner: FixedWidget<T, SUB_W, SUB_H>,
 {
     pub fn new(inner: Inner) -> Self {
@@ -127,7 +207,6 @@ impl<
     > FixedWidget<T, W, H> for Subframer<T, Inner, W, H, X, Y, SUB_W, SUB_H>
 where
     T: Copy,
-    T: From<char>,
     Inner: FixedWidget<T, SUB_W, SUB_H>,
 {
     type State = Inner::State;
