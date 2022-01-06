@@ -146,7 +146,7 @@ where
 
     fn render(&self, state: &[T], frame: &mut FrameAccessor<T>, _tick: u32) {
         // magic, just iterate from the other direction =)
-        for (i, v) in (frame.width()..0).zip(state.iter().rev()) {
+        for (i, v) in (0..frame.width()).rev().zip(state.iter().rev()) {
             frame[(i, 0)] = *v;
         }
     }
