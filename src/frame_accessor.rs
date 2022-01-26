@@ -248,3 +248,32 @@ impl<'a, 'b, T, const W: usize, const H: usize> From<&'b mut FixedFrameAccessor<
         unsafe { Self::new_unchecked_strided(f.data, W, H, f.stride) }
     }
 }
+
+pub struct FixedFrame<T, const W: usize, const H: usize>
+where [(); W * H]:
+{
+    data: [T; W * H],
+}
+
+impl<T, const W: usize, const H: usize> FixedFrame<T, W, H>
+where
+    [(); W * H]:,
+    T: Copy,
+{
+    pub fn new(fill: T) -> Self {
+        Self {
+            data: [fill; W * H]
+        }
+    }
+
+    pub fn accessor(&mut self) -> FixedFrameAccessor<T, W, H> {
+        unsafe {
+            // safety: the size is matching by construction
+            FixedFrameAccessor::new_unchecked(&mut self.data)
+        }
+    }
+
+    pub fn data(&self) -> &[T; W * H] {
+        &self.data
+    }
+}
