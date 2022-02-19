@@ -43,7 +43,8 @@ pub fn fixed_widget_adapter_impl(input: TokenStream1) -> TokenStream1 {
 
             impl<T, const W: usize, const H: usize> FixedWidget<T, W, H> for #ty
             where
-                T: Copy
+                T: Copy,
+                T: DefaultFill
             {
                 type State = <#ty as #crate_name::Widget<T>>::State;
 
@@ -58,7 +59,8 @@ pub fn fixed_widget_adapter_impl(input: TokenStream1) -> TokenStream1 {
 
             impl<const W: usize, const H: usize> FixedWidget<#element_type, W, H> for #ty
             where
-                T: Copy
+                T: Copy,
+                T: DefaultFill
             {
                 type State = <#ty as #crate_name::Widget<#element_type>>::State;
 

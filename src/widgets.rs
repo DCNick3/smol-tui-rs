@@ -2,7 +2,7 @@ use core::{marker::PhantomData, cmp::max};
 
 use smol_tui_derive::fixed_widget_adapter;
 
-use crate::{widget::Widget, FixedFrameAccessor, FixedWidget, FrameAccessor, FrameAccessorTrait};
+use crate::{widget::Widget, FixedFrameAccessor, FixedWidget, FrameAccessor, FrameAccessorTrait, DefaultFill};
 
 // Fills all the provided frame with the same char passed through state
 #[derive(Default)]
@@ -105,10 +105,12 @@ where
 impl<T> Widget<T> for LAlignedLabel<T>
 where
     T: Copy,
+    T: DefaultFill,
 {
     type State = [T];
 
     fn render(&self, state: &[T], frame: &mut FrameAccessor<T>, _tick: u32) {
+        frame.fill(T::default());
         for (i, v) in (0..frame.width()).zip(state) {
             frame[(i, 0)] = *v;
         }
@@ -119,10 +121,12 @@ where
 impl<T> Widget<T> for CAlignedLabel<T>
 where
     T: Copy,
+    T: DefaultFill,
 {
     type State = [T];
 
     fn render(&self, state: &[T], frame: &mut FrameAccessor<T>, _tick: u32) {
+        frame.fill(T::default());
         // need a bit of maths here though
 
         // how many positions frame is wider that the rendered string?
@@ -141,10 +145,12 @@ where
 impl<T> Widget<T> for RAlignedLabel<T>
 where
     T: Copy,
+    T: DefaultFill,
 {
     type State = [T];
 
     fn render(&self, state: &[T], frame: &mut FrameAccessor<T>, _tick: u32) {
+        frame.fill(T::default());
         // magic, just iterate from the other direction =)
         for (i, v) in (0..frame.width()).rev().zip(state.iter().rev()) {
             frame[(i, 0)] = *v;
