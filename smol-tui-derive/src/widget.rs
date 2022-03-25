@@ -1,26 +1,33 @@
-use syn::{parse_macro_input, ItemImpl, GenericArgument};
-use quote::{quote};
 use crate::common::crate_name;
+use quote::quote;
+use syn::{parse_macro_input, GenericArgument, ItemImpl};
 
 use proc_macro::TokenStream as TokenStream1;
 
 pub fn fixed_widget_adapter_impl(input: TokenStream1) -> TokenStream1 {
     let input = parse_macro_input!(input as ItemImpl);
-    
+
     //println!("{:#?}", input);
-    
-    let (bang, path, _) = input.trait_.clone().unwrap_or_else(|| panic!("You should put this attribute only on Widget trait implementations"));
+
+    let (bang, path, _) = input.trait_.clone().unwrap_or_else(|| {
+        panic!("You should put this attribute only on Widget trait implementations")
+    });
     if let Some(_) = bang {
         panic!("Bang implementations are not supported")
     }
-    
+
     let ty = input.self_ty.as_ref();
 
     // I don't wanna do the real parsing here
     // so just check whether there are __any__ generic parameters =)
     let generic = !input.generics.params.empty_or_trailing();
 
-    let element_type = match path.segments.last().unwrap_or_else(|| panic!("bad2")).arguments {
+    let element_type = match path
+        .segments
+        .last()
+        .unwrap_or_else(|| panic!("bad2"))
+        .arguments
+    {
         //syn::PathArguments::None => (true,),
         syn::PathArguments::AngleBracketed(ref bb) => {
             if bb.args.len() != 1 {
@@ -31,10 +38,10 @@ pub fn fixed_widget_adapter_impl(input: TokenStream1) -> TokenStream1 {
             } else {
                 panic!("Something weird, can't parse it")
             }
-        },
+        }
         _ => panic!("Something weird, can't parse it"),
     };
-    
+
     let crate_name = crate_name();
 
     let gen = if generic {

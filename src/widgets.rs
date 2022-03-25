@@ -1,8 +1,10 @@
-use core::{marker::PhantomData, cmp::max};
+use core::{cmp::max, marker::PhantomData};
 
 use smol_tui_derive::fixed_widget_adapter;
 
-use crate::{widget::Widget, FixedFrameAccessor, FixedWidget, FrameAccessor, FrameAccessorTrait, DefaultFill};
+use crate::{
+    widget::Widget, DefaultFill, FixedFrameAccessor, FixedWidget, FrameAccessor, FrameAccessorTrait,
+};
 
 // Fills all the provided frame with the same char passed through state
 #[derive(Default)]

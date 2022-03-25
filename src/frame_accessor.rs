@@ -250,7 +250,8 @@ impl<'a, 'b, T, const W: usize, const H: usize> From<&'b mut FixedFrameAccessor<
 }
 
 pub struct FixedFrame<T, const W: usize, const H: usize>
-where [(); W * H]:
+where
+    [(); W * H]:,
 {
     data: [T; W * H],
 }
@@ -262,7 +263,7 @@ where
 {
     pub fn new(fill: T) -> Self {
         Self {
-            data: [fill; W * H]
+            data: [fill; W * H],
         }
     }
 

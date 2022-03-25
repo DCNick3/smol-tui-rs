@@ -1,14 +1,13 @@
-use proc_macro::TokenStream;
-use quote::{quote};
-use syn::{self, Attribute, AttributeArgs, parse_quote, Expr};
-use syn::{parse_macro_input, Ident, Type};
-use darling::{self, FromMeta, FromAttributes};
 use crate::common::crate_name;
+use darling::{self, FromAttributes, FromMeta};
+use proc_macro::TokenStream;
+use quote::quote;
+use syn::{self, parse_quote, Attribute, AttributeArgs, Expr};
+use syn::{parse_macro_input, Ident, Type};
 
 #[derive(Debug, FromAttributes)]
 #[darling(attributes(smol_tui), allow_unknown_fields)]
-struct SkipField
-{
+struct SkipField {
     #[darling(default)]
     skip: bool,
 
@@ -29,7 +28,6 @@ struct WidgetAttrs {
     allow_intersection: bool,
 }
 
-
 #[derive(Debug, FromMeta)]
 struct SceneAttr {
     w: usize,
@@ -44,7 +42,9 @@ pub fn smol_tui_impl(args: TokenStream, input: TokenStream) -> TokenStream {
     let args: AttributeArgs = parse_macro_input!(args);
     let scene_attr = match SceneAttr::from_list(&args) {
         Ok(v) => v,
-        Err(e) => { return TokenStream::from(e.write_errors()); }
+        Err(e) => {
+            return TokenStream::from(e.write_errors());
+        }
     };
 
     let crate_name = crate_name();
@@ -61,12 +61,12 @@ pub fn smol_tui_impl(args: TokenStream, input: TokenStream) -> TokenStream {
                 if ident.to_string() == "smol_tui" {
                     my_attrs.push(attr.clone());
 
-                    return false
+                    return false;
                 }
             }
             true
         });
-        
+
         let skip = SkipField::from_attributes(&my_attrs).unwrap();
         if skip.skip {
             let init = if let Some(ref init) = skip.init {
@@ -79,12 +79,18 @@ pub fn smol_tui_impl(args: TokenStream, input: TokenStream) -> TokenStream {
             continue;
         }
 
-        let widget_attrs= match WidgetAttrs::from_attributes(&my_attrs) {
+        let widget_attrs = match WidgetAttrs::from_attributes(&my_attrs) {
             Ok(a) => a,
-            Err(e) => { return TokenStream::from(e.write_errors()); },// TODO: accumulate all the errors
+            Err(e) => {
+                return TokenStream::from(e.write_errors());
+            } // TODO: accumulate all the errors
         };
 
-        let SceneAttr { w: scene_w, h: scene_h, ref char_type } = scene_attr;
+        let SceneAttr {
+            w: scene_w,
+            h: scene_h,
+            ref char_type,
+        } = scene_attr;
 
         let WidgetAttrs { x, y, w, h, .. } = widget_attrs;
 
