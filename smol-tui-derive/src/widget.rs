@@ -7,8 +7,6 @@ use proc_macro::TokenStream as TokenStream1;
 pub fn fixed_widget_adapter_impl(input: TokenStream1) -> TokenStream1 {
     let input = parse_macro_input!(input as ItemImpl);
 
-    //println!("{:#?}", input);
-
     let (bang, path, _) = input.trait_.clone().unwrap_or_else(|| {
         panic!("You should put this attribute only on Widget trait implementations")
     });

@@ -112,18 +112,18 @@ unsafe impl<'a, T> FrameAccessorTrait for FrameAccessor<'a, T> {
         (self.width, self.height)
     }
 
-    unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Element {
-        self.data.get_unchecked(x + y * self.stride)
-    }
-
-    unsafe fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut Self::Element {
-        self.data.get_unchecked_mut(x + y * self.stride)
-    }
     fn data(&self) -> &[Self::Element] {
         self.data
     }
+
     fn data_mut(&mut self) -> &mut [Self::Element] {
         self.data
+    }
+    unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Element {
+        self.data.get_unchecked(x + y * self.stride)
+    }
+    unsafe fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut Self::Element {
+        self.data.get_unchecked_mut(x + y * self.stride)
     }
 }
 
@@ -165,9 +165,9 @@ impl<'a, T, const W: usize, const H: usize> FixedFrameAccessor<'a, T, W, H> {
         unsafe { FixedFrameAccessor::new_unchecked(data) }
     }
 
-    pub fn subframe<'b, const X: usize, const Y: usize, const SUB_W: usize, const SUB_H: usize>(
-        &'b mut self,
-    ) -> FixedFrameAccessor<'b, T, SUB_W, SUB_H> {
+    pub fn subframe<const X: usize, const Y: usize, const SUB_W: usize, const SUB_H: usize>(
+        &mut self,
+    ) -> FixedFrameAccessor<'_, T, SUB_W, SUB_H> {
         // I hate that we can't have constexpr expressions for constant parameters
         // God bless rust
         if X + SUB_W > W || Y + SUB_H > H {
@@ -179,14 +179,13 @@ impl<'a, T, const W: usize, const H: usize> FixedFrameAccessor<'a, T, W, H> {
 
     // SAFETY: X + SUB_W <= W && Y + SUB_H <= H
     pub unsafe fn subframe_unchecked<
-        'b,
         const X: usize,
         const Y: usize,
         const SUB_W: usize,
         const SUB_H: usize,
     >(
-        &'b mut self,
-    ) -> FixedFrameAccessor<'b, T, SUB_W, SUB_H> {
+        &mut self,
+    ) -> FixedFrameAccessor<T, SUB_W, SUB_H> {
         // SAFETY: i hope it's safe
         FixedFrameAccessor::new_unchecked_strided(
             &mut self.data[X + Y * self.stride..],
@@ -205,19 +204,19 @@ unsafe impl<'a, T, const W: usize, const H: usize> FrameAccessorTrait
         (W, H)
     }
 
-    unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Element {
-        self.data.get_unchecked(x + y * self.stride)
-    }
-
-    unsafe fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut Self::Element {
-        self.data.get_unchecked_mut(x + y * self.stride)
-    }
-
     fn data(&self) -> &[Self::Element] {
         self.data
     }
+
     fn data_mut(&mut self) -> &mut [Self::Element] {
         self.data
+    }
+
+    unsafe fn get_unchecked(&self, x: usize, y: usize) -> &Self::Element {
+        self.data.get_unchecked(x + y * self.stride)
+    }
+    unsafe fn get_unchecked_mut(&mut self, x: usize, y: usize) -> &mut Self::Element {
+        self.data.get_unchecked_mut(x + y * self.stride)
     }
 }
 
