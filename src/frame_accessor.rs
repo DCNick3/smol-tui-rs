@@ -248,6 +248,10 @@ impl<'a, 'b, T, const W: usize, const H: usize> From<&'b mut FixedFrameAccessor<
     }
 }
 
+// this currently requires feature(generic_const_exprs), which is kinda a shame
+// this can be implemented using [[T; W]; H] (kudos to [nalgebra](https://docs.rs/nalgebra/0.30.1/src/nalgebra/base/array_storage.rs.html#39)),
+//      but we lose the ability to know the size of the buffer in compile time
+// this is currently used in HD44780Adapter, should check what the consequences are for the codegen
 pub struct FixedFrame<T, const W: usize, const H: usize>
 where
     [(); W * H]:,

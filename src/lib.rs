@@ -1,4 +1,5 @@
 #![no_std]
+// Used for implementation of Frame storage (we create an array that is Width * Height long)
 #![feature(generic_const_exprs)]
 
 mod frame_accessor;
